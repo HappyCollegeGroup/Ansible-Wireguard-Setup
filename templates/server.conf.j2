@@ -1,0 +1,7 @@
+[Interface]
+Address = {{ server_ipv4 }}
+ListenPort = {{ wgport }}
+PrivateKey = {{ server_prikey.stdout }}
+PostUp = iptables -A FORWARD -i {{ wgname }} -j ACCEPT && iptables -A FORWARD -o {{ wgname }} -j ACCEPT && iptables -t nat -A POSTROUTING -o {{ interface }} -j MASQUERADE
+PostDown = iptables -D FORWARD -i {{ wgname }} -j ACCEPT && iptables -D FORWARD -o {{ wgname }} -j ACCEPT && iptables -t nat -D POSTROUTING -o {{ interface }} -j MASQUERADE
+

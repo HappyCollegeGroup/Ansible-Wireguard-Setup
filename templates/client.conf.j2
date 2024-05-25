@@ -1,0 +1,9 @@
+[Interface]
+Address = {{ client_ipv4 }}/32
+PrivateKey = {{ client_prikey.stdout }}
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = {{ server_pubkey.stdout }}
+AllowedIPs = 0.0.0.0/0
+Endpoint = {{ server_ipv4 }}:{{ wg_port }}
