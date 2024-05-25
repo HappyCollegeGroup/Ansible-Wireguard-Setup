@@ -3,7 +3,7 @@
 Use ansible playbook to setup server and create client automatically.
 
 ## Requirement
-1. ifconfig
+1. Ubuntu desktop
 2. ansible
 
 ## Usage
