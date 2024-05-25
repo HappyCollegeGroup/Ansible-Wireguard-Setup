@@ -1,0 +1,82 @@
+---
+# https://dev.to/tangramvision/exploring-ansible-via-setting-up-a-wireguard-vpn-3389
+- name: setup wireguard vpn server
+  hosts: vpn_server
+  become: yes
+  
+  # https://www.claudiokuenzler.com/blog/1407/how-to-set-default-values-empty-string-vars-prompt-ansible
+  vars_prompt:
+    - name: wgname
+      private: no
+      prompt: "Enter a name of server"
+      default: wg0
+      
+    - name: wgport
+      private: no
+      prompt: "Enter a listen port of server"
+      default: 51280
+    
+    - name: server_ipv4
+      private: no
+      prompt: "Enter ipv4 address of server"
+      default: "10.0.0.1/24"
+      
+    - name: interface
+      private: no
+      prompt: "Enter internet interface name"
+      default: "enp0s3"
+    
+  tasks:
+    # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html
+    # https://stackoverflow.com/questions/46669172/how-to-fix-permission-denied-error-when-trying-to-install-packages-using-ansible
+    - name: install wireguard package
+      apt:
+        name: wireguard
+        state: present
+        update_cache: yes
+   
+    # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/shell_module.html
+    - name: generate server keys
+      shell:
+        cmd: wg genkey | tee {{ wgname }}_privatekey | wg pubkey > {{ wgname }}_publickey 
+        chdir: "/etc/wireguard/"
+      
+    - name: get server private key
+      shell: 
+        cmd: cat {{ wgname }}_privatekey
+        chdir: "/etc/wireguard/"
+      register: server_prikey
+     
+    # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html
+    - name: create server wireguard config
+      template:
+        dest: /etc/wireguard/{{ wgname }}.conf
+        src: server.conf.j2
+        owner: root
+        group: root
+        mode: '0600'
+   
+    # https://docs.ansible.com/ansible/latest/collections/ansible/posix/sysctl_module.html
+    - name: enable ip forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        state: present
+        sysctl_set: yes
+        reload: yes
+       
+    - name: start wireguard server
+      shell: wg-quick up {{ wgname }}
+      args:
+        executable: /bin/bash
+      register: is_success
+
+    - name: show wg service
+      shell: wg show
+      args:
+        executable: /bin/bash
+      register: wg_service
+      
+    - debug:
+        var: wg_service.stdout_lines
+
