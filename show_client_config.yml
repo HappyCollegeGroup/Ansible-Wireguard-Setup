@@ -1,0 +1,32 @@
+- name: show the qr code of client
+  hosts: localhost
+  connection: local
+  become: yes
+  
+  vars_prompt:
+    - name: client_name
+      private: no
+      prompt: "Enter a name of client"
+      default: client0
+    
+  tasks:
+    - name: install imagemagick
+      apt:
+        name: imagemagick
+        state: present
+        update_cache: yes
+    
+    - name: install qrencode
+      apt:
+        name: qrencode
+        state: present
+        update_cache: yes
+    
+    - name: generate QR code for {{ client_name }}
+      shell: 
+        cmd: qrencode -o qrcode.png < {{ client_name }}.conf
+        chdir: '/etc/wireguard'
+    
+    - shell: 
+        cmd: display qrcode.png
+        chdir: '/etc/wireguard'
