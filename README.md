@@ -25,13 +25,13 @@ Use ansible playbook to setup server and create client automatically.
 2. connect the url from client
 
 ## Wireguard Usage
-## Close VPN
+### Close VPN
 1. ```sudo wg-quick down wg0```
 change wg0 to your vpn name
 
-## Open VPN
+### Open VPN
 1. ```sudo wg-quick up wg0```
 change wg0 to your vpn name
 
-## Show wireguard status
+### Show wireguard status
 1. ```sudo wg show```
