@@ -1,0 +1,80 @@
+---
+- name: add a wireguard vpn client
+  hosts: vpn_server
+  become: yes
+  
+  vars_prompt:
+    - name: client_name
+      private: no
+      prompt: "Enter a name of client"
+      default: client0
+    
+    - name: server_name
+      private: no
+      prompt: "Enter the name of server"
+      default: wg0
+    
+    - name: server_ipv4
+      private: no
+      prompt: "Enter ipv4 address of server"
+      default: "192.168.1.115"
+    
+    - name: wg_port
+      private: no
+      prompt: "Enter listening port of server"
+      default: 51280
+    
+    - name: client_ipv4
+      private: no
+      prompt: "Enter ipv4 address of client"
+      default: "10.0.0.2"
+  
+  tasks:
+    # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/shell_module.html
+    - name: generate client keys
+      shell:
+        cmd: wg genkey | tee {{ client_name }}_privatekey | wg pubkey > {{ client_name }}_publickey 
+        chdir: "/etc/wireguard/"
+      
+    - name: get client private key
+      shell: 
+        cmd: cat {{ client_name }}_privatekey
+        chdir: "/etc/wireguard/"
+      register: client_prikey
+        
+    - name: get client public key
+      shell: 
+        cmd: cat {{ client_name }}_publickey
+        chdir: "/etc/wireguard/"
+      register: client_pubkey
+      
+    - name: get server public key
+      shell: 
+        cmd: cat {{ server_name }}_publickey
+        chdir: "/etc/wireguard/"
+      register: server_pubkey
+     
+    # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html
+    - name: create client wireguard config
+      template:
+        dest: /etc/wireguard/{{ client_name }}.conf
+        src: client.conf.j2
+        owner: root
+        group: root
+        mode: '0600'
+        
+    # https://anuragbhatia.com/2020/04/uncategorized/manage-wireguard-users-using-ansible/
+    - name: update server config
+      blockinfile:
+        path: '/etc/wireguard/{{ server_name }}.conf'
+        block: |
+          # {{ client_name }}
+          [Peer]
+          PublicKey = {{ client_pubkey.stdout }}
+          AllowedIPs = {{ client_ipv4 }}/32
+        
+    # reload without quit vpn
+    - name: reload wireguard config
+      shell: wg syncconf {{ server_name }} <(wg-quick strip {{ server_name }})
+      args:
+        executable: /bin/bash
